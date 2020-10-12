@@ -1,30 +1,37 @@
-﻿$applicationNameToSearch = "FortiClient SSLVPN v4.0.2303"
-$applicationVersionToSearch = "4.0.2303"
-$outputcode = 1
+$SearchApplicationName = "FortiClient SSLVPN v4.0.2303"
+$SearchApplicationVersion = "4.0.2303"
+$OutputCodeSuccess = "1"
+$OutputCodeFailure = "2"
+$UninstallAlreadyRan = 'false'
 
-function Get-ApplicationVersion 
+function Detect-Application 
 {
-$my_check = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, InstallDate | Where -property displayName -Match $applicationNameToSearch
-    #If my_check is not null, check for version match
+$my_check = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion, InstallDate | Where -property displayName -Match $SearchApplicationName
+#If program is found ($my_check not null), check for specific version match
     if ($my_check) 
-        {
+    {
         $versionNumber = $my_check.DisplayVersion
-            if ($versionnumber.Equals($applicationVersionToSearch))
+            if ($versionnumber.Equals($SearchApplicationVersion))
+            {
+                #We wouldn't want to get stuck in a loop, would we? Aborts if we made it before.
+                if ($UninstallAlreadyRan -eq 'true')
                 {
-                #write-output "Match found: $applicationNameToSearch version $applicationVersionToSearch found, calling uninstall function."
-                Uninstall-Application
+                   write-output $OutputCodeFailure
+                   exit 2
                 }
-#            else 
-#                {
-#                #write-output "Match failed: $applicationNameToSearch version $versionNumber was found, but wanted $applicationVersionToSearch."
-#                }
+                else
+                {
+                    #Program with specific version found. Calling uninstall function.
+                    Uninstall-Application
+                }
+            }
         }
-    else 
-        {
-        #writing success code for Intune to pick up
-        write-output $outputcode
-        Exit 0
-        }
+    else
+    {
+        #Program with specific version isn't installed. Writing output for MEM to pick up.
+        write-output $OutputCodeSuccess
+        exit 0
+    }
 }
 
 function Uninstall-Application
@@ -40,11 +47,16 @@ Stop-Process -Name "FortiSSLVPNdaemon" -Force
 Start-Process msiexec.exe -Wait -ArgumentList '/x {A34DCE59-0004-0000-2303-3F8A9926B752} /qn'
 
 #Cleans up the directory in case it is left behind
-#Remove-Item -Path "HKLM:\SOFTWARE\Wow6432Node\ZOHO Corp\" -Confirm:$false -Recurse
 Remove-Item -Path "C:\Program Files (x86)\Fortinet\" -Confirm:$false -Recurse
-write-output $outputcode
-Exit 0
+
+#We wouldn't want to get stuck in a loop, would we?
+$UninstallAlreadyRan = 'true'
+
+#Re-run application check to make sure it's gone.
+Detect-Application
 }
 
 #This starts the process. Checks for the application, and, if found, calls the uninstall script block. 
-Get-ApplicationVersion
+Detect-Application
+#We shouldn't get to this point. If we do, error!
+write-output $OutputCodeFailure
