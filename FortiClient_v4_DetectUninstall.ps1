@@ -13,7 +13,7 @@ $my_check = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\Curren
         $versionNumber = $my_check.DisplayVersion
             if ($versionnumber.Equals($SearchApplicationVersion))
             {
-                #We wouldn't want to get stuck in a loop, would we? Aborts if we made it before.
+                #We wouldn't want to get stuck in a loop, would we? Aborts if we made it here before.
                 if ($UninstallAlreadyRan -eq 'true')
                 {
                    write-output $OutputCodeFailure
@@ -37,17 +37,17 @@ $my_check = Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\Curren
 function Uninstall-Application
 {
 #Stopping the FortiClient service
-Get-Service -DisplayName "FortiClient SSLVPN" | Stop-Service
+Get-Service -DisplayName "FortiClient SSLVPN" | Stop-Service -ErrorAction SilentlyContinue
 
 #Force closing running programs
-Stop-Process -Name "FortiSSLVPNclient" -Force
-Stop-Process -Name "FortiSSLVPNdaemon" -Force
+Stop-Process -Name "FortiSSLVPNclient" -Force -ErrorAction SilentlyContinue
+Stop-Process -Name "FortiSSLVPNdaemon" -Force -ErrorAction SilentlyContinue
 
 #This uninstalls 'FortiClient SSLVPN v4.0.2302'
 Start-Process msiexec.exe -Wait -ArgumentList '/x {A34DCE59-0004-0000-2303-3F8A9926B752} /qn'
 
 #Cleans up the directory in case it is left behind
-Remove-Item -Path "C:\Program Files (x86)\Fortinet\" -Confirm:$false -Recurse
+Remove-Item -Path "C:\Program Files (x86)\Fortinet\" -Confirm:$false -Recurse -ErrorAction SilentlyContinue
 
 #We wouldn't want to get stuck in a loop, would we?
 $UninstallAlreadyRan = 'true'
