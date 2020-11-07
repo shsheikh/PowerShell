@@ -20,6 +20,13 @@
 ## With the changes made, copy the script somewhere local on the machine, then create a Scheduled Task that triggers on user logon and executes this script.
 ## I do the above with a GPO, but other methods will work as long as the end result is the same.
 
+## Computer > Preferences > Windows Settings > Files > File/Target Path: C:\Users\Public\Add_Teams_Firewall_Exceptions.p1, copied from a local share everyone can access
+## Computer > Preferences > Control Panel Settings > Scheduled Tasks > Win7 Task called Teams_Firewall_Rules_All_Users
+## -Action: Update
+## -RunAs: SYSTEM / run whether the user is logged on or not / Run with highest privileges 
+## -Triggered at log on of any users
+## -Actions, Start a Program > powershell.exe -executionpolicy bypass -file "C:\Users\Public\Add_Teams_Firewall_Exceptions.ps1"
+
 #-----------------------------#
 #   Set your variables here!  #
 #-----------------------------#
@@ -45,7 +52,7 @@ return "[{0:MM/dd/yy} {0:HH:mm:ss}]" -f (Get-Date)
 }
 
 Write-Output "$(Get-TimeStamp) Script triggered due to login." | out-file -filepath $logfilepath -append
-# Sleeping for 2 seconds to allow log to be written. This value can be tweaked for slower\faster systems, but it should exist.
+# Sleeping for 2 seconds to allow log to be written. This value can be tweaked for slower\faster systems (primarly HDD vs SSD), but it should exist with a value of at least 2.
 Start-Sleep 2
 # Searching the Task Scheduler log in the last minute to see who triggered the script, returns the first hit only, then captures the DOMAIN\USERNAME value only.
 $LastLoggedOnUserFull = Get-WinEvent -FilterHashtable @{logname=”Microsoft-Windows-TaskScheduler/Operational”;ID=119;starttime=((Get-Date).AddMinutes(-1))} | Where {$_.Message -match $scheduledtaskname} | select -first 1 @{N='User';E={$_.Properties[1].Value}} | select -expand User
