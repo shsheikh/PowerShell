@@ -1,12 +1,12 @@
 # Author: Sameer Sheikh
-# Date: 2021/06/07
+# Date: 2021/06/09
 # Description: Create a Powershell script from content within this Powershell script, then register it as a scheduled task. Created for EndPoint Manager deployment.
  
 ########################################
 # Define PS Script Data to Create Here #
 ########################################
 $PSScriptContent = @'
-## Version 1.1 - Deployed 2021/06/08
+## Version 1.1 - Deployed 2021/06/09
 ## Run in system context
 
 Function Test-RegistryValue
@@ -44,30 +44,34 @@ New-ItemProperty -path $regKeyDNSClient -Name EnableMulticast -PropertyType DWOR
 # Define Where to Locally Store Created Script Here #
 #####################################################
 
-$dirpath = $(Join-Path $env:ProgramData EndpointDeployment\Scripts)
-$scriptname = "Disable-NETBIOS-LLMNR.ps1"
+$FileDeploymentPath = $(Join-Path $env:ProgramData EndpointDeployment\Scripts)
+$PSScriptName = "Disable-NETBIOS-LLMNR.ps1"
 $SchTaskName = "EndpointManager-Disable-NETBIOS-LLMNR"
 
 #######################################
 # Creating the PowerShell Script Here #
 #######################################
 
-if (!(Test-Path $dirpath))
+if (!(Test-Path $FileDeploymentPath))
 {
-New-Item -Path $dirpath -ItemType Directory -Force -Confirm:$false
+New-Item -Path $FileDeploymentPath -ItemType Directory -Force -Confirm:$false
 }
-Out-File -FilePath $(Join-Path $dirpath $scriptname) -Encoding unicode -Force -InputObject $PSScriptContent -Confirm:$false
+Out-File -FilePath $(Join-Path $FileDeploymentPath $PSScriptName) -Encoding unicode -Force -InputObject $PSScriptContent -Confirm:$false
 
-##################################################################################################################
-# Register newly created PowerShell script as a scheduled task that runs at every logon under the SYSTEM context #
-##################################################################################################################
+#############################################################################
+# Define your variables for the scheduled task to be created and registered #
+#############################################################################
 
 $SchTaskTrigger1 = New-ScheduledTaskTrigger -AtLogon
 $SchTaskRunAsUser = "SYSTEM"
-$SchTaskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ex bypass -file ""$(Join-Path $dirpath $scriptname)"
+$SchTaskAction = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-ex bypass -file ""$(Join-Path $FileDeploymentPath $PSScriptName)"
 $SchTaskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
 
-Register-ScheduledTask -TaskName "$SchTaskName" -Trigger $SchTaskTrigger1 -User $SchTaskRunAsUser -Action $SchTaskAction -Force -Settings $SchTaskSettings
+########################################################################################
+# Creating Scheduled Task using the above variables to run the PS Script created above #
+########################################################################################
+
+Register-ScheduledTask -TaskName "$SchTaskName" -Trigger $SchTaskTrigger1 -User $SchTaskRunAsUser -Action $SchTaskAction -Settings $SchTaskSettings -Force 
 
 ##############################
 # Immediately start the task #
